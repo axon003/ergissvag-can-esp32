@@ -66,4 +66,3 @@ Editezi **`config.h`**:
 ## Vezi si
 
 - `esp32/` — versiune PlatformIO (CLI build)
-- `gateway_j533.html` — schema CAN J533 PQ35

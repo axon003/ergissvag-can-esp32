@@ -90,10 +90,8 @@ Conector T20a (verde, 20 pini):
 | 16  | CAN-Antrieb LOW     | 500 kbps|
 
 Conector T20b (maro/altul, alte pini):
-- CAN-Komfort HIGH/LOW — 100 kbps — vezi `gateway_j533.html` pt. map completa
 - CAN-Infotainment — 100 kbps
 
-Referinta vizuala: `gateway_j533.html`.
 
 ## Protocol TCP
 
@@ -166,7 +164,6 @@ Consum mediu: ~80 mA @ 3V3 cand activ (WiFi AP), ~10uA in deep sleep.
 
 ## Referinte
 
-- `../gateway_j533.html` — ghid montaj fizic J533 + pin-out complet
 - ErgissVAG: `D:/apps/ergissvag/app/src/main/java/ro/ergiss/vag/obd/` — client pattern
 - ergCAN: `D:/apps/ergcan/` — app dedicat CAN sniffing (in dezvoltare)
 - VW self-study SSP 269: CAN Data Bus (Antrieb + Komfort PQ35)

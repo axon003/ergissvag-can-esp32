@@ -28,7 +28,6 @@ frames and serves them to the app over WiFi.
 ## Hardware
 - ESP32 DevKit v1 + SN65HVD230 CAN transceiver
 - (optional) GY-85 IMU + BMP280
-- Tap point: J533 gateway pin 6/16 — wiring guide in `gateway_j533.html`
 
 ⚠️ **Safety:** listen-only tap, inline fuse, never connect TX. You are responsible for any
 work on your vehicle's wiring.
