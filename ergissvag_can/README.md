@@ -1,68 +1,71 @@
 # ergissvag_can — Arduino IDE sketch
 
-Versiunea pentru Arduino IDE (folder = nume sketch). Echivalent functional cu `esp32/` (PlatformIO).
+Arduino IDE build (folder name = sketch name). Functionally equivalent to `esp32/` (PlatformIO).
 
-## Setup Arduino IDE
+## Arduino IDE setup
 
-### 1. Board ESP32
+### 1. ESP32 board
 
 `File → Preferences → Additional Boards Manager URLs`:
 ```
 https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
 ```
-Apoi `Tools → Board → Boards Manager` → cauta **"esp32"** by Espressif → instaleaza ultima versiune (3.x+).
+Then `Tools → Board → Boards Manager` → search **"esp32"** by Espressif → install the latest (3.x+).
 
-Selecteaza board: **Tools → Board → ESP32 Arduino → ESP32 Dev Module**
+Select board: **Tools → Board → ESP32 Arduino → ESP32 Dev Module**
 Upload speed: 921600
 Flash size: 4MB
 Partition scheme: Default 4MB with spiffs
 
-### 2. Librarii (Sketch → Include Library → Manage Libraries)
+### 2. Libraries (Sketch → Include Library → Manage Libraries)
 
-| Librarie | Autor | Note |
+| Library | Author | Note |
 |---|---|---|
-| **Adafruit BMP280 Library** | Adafruit | senzor presiune/temperatura |
-| **Adafruit ADXL345** | Adafruit | accelerometru GY-85 |
-| **Adafruit HMC5883 Unified** | Adafruit | magnetometru GY-85 |
-| **Adafruit Unified Sensor** | Adafruit | dependinta comuna (BusIO si Sensor base) |
+| **Adafruit BMP280 Library** | Adafruit | pressure/temperature sensor |
+| **Adafruit ADXL345** | Adafruit | GY-85 accelerometer |
+| **Adafruit HMC5883 Unified** | Adafruit | GY-85 magnetometer |
+| **Adafruit Unified Sensor** | Adafruit | common dependency (BusIO + Sensor base) |
 
-> ITG3200 (giroscop) e citit raw I2C in `sensors.cpp` — nu ai nevoie de librarie.
+> ITG3200 (gyroscope) is read raw over I2C in `sensors.cpp` — no library needed.
 
-> `ESPmDNS`, `WiFi`, `driver/twai.h` vin in core-ul ESP32, nu trebuie instalate separat.
+> `ESPmDNS`, `WiFi`, `driver/twai.h` ship with the ESP32 core — no separate install.
 
 ### 3. Open + Upload
 
-`File → Open` → selecteaza `ergissvag_can.ino`. Arduino IDE va include automat `config.h`, `sensors.h`, `sensors.cpp` (sunt in acelasi folder).
+`File → Open` → select `ergissvag_can.ino`. The Arduino IDE automatically includes
+`config.h`, `sensors.h`, `sensors.cpp` (same folder).
 
-Upload (Ctrl+U) cu ESP32 conectat pe USB. Pe DevKit V1 nu trebuie sa tii nimic apasat — auto-reset functioneaza din USB-Serial chip.
+Upload (Ctrl+U) with the ESP32 on USB. On the DevKit V1 you don't need to hold anything —
+auto-reset works through the USB-Serial chip.
 
 ## Hardware
 
-| Conexiune | Pin ESP32 |
+| Connection | ESP32 pin |
 |---|---|
 | BMP280 + GY-85 (I2C SDA) | **GPIO 21** |
 | BMP280 + GY-85 (I2C SCL) | **GPIO 22** |
 | SN65HVD230 CTX (CAN TX) | **GPIO 17** (TX2) |
 | SN65HVD230 CRX (CAN RX) | **GPIO 16** (RX2) |
-| Alimentare module | **3V3** + **GND** |
+| Module power | **3V3** + **GND** |
 
-## Acces in retea
+## Network access
 
-- Hostname mDNS: **`ergisscan.local`**
-- TCP server JSON: port **31416**
-- WiFi STA: `YOUR_WIFI_SSID` / `YOUR_WIFI_PASSWORD` (hardcoded in `config.h`)
-- Fallback AP daca STA esueaza: `ergCAN_ESP32` / `ergcan2026`
+- mDNS hostname: **`ergisscan.local`**
+- TCP JSON server: port **31416**
+- WiFi STA: `YOUR_WIFI_SSID` / `YOUR_WIFI_PASSWORD` (set in `config.h`)
+- Fallback AP if STA fails: `ergCAN_ESP32` / `ergcan2026`
 
-Test: `nc ergisscan.local 31416` (sau `ncat`, `telnet`, `socat`)
+Test: `nc ergisscan.local 31416` (or `ncat`, `telnet`, `socat`)
 
-## Schimbari config rapide
+## Quick config changes
 
-Editezi **`config.h`**:
+Edit **`config.h`**:
 - `CAN_BITRATE` — 500000 (Antrieb) / 100000 (Komfort)
-- `WIFI_STA_SSID` / `WIFI_STA_PASS` — daca schimbi router
-- `SENSOR_SAMPLE_MS` — 100ms default (10Hz); 50ms = 20Hz; 200ms = 5Hz
-- `MDNS_HOSTNAME` — daca vrei alt nume .local
+- `WIFI_STA_SSID` / `WIFI_STA_PASS` — set to your own router
+- `SENSOR_SAMPLE_MS` — 100 ms default (10 Hz); 50 ms = 20 Hz; 200 ms = 5 Hz
+- `MDNS_HOSTNAME` — change the `.local` name
 
-## Vezi si
+## See also
 
-- `esp32/` — versiune PlatformIO (CLI build)
+- `esp32/` — PlatformIO version (CLI build)
+- [ErgissVAG F16 on Google Play](https://play.google.com/store/apps/details?id=ro.ergiss.vag.f16) — companion app
