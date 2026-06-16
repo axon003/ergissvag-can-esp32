@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>ErgissVAG CAN — Gateway J533 tap (Seat Altea XL 2011 PQ35)</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, Segoe UI, Arial, sans-serif; background: #0f1420; color: #e7eaf0; margin: 0; padding: 24px; line-height: 1.55; }
+  h1 { color: #ffb74d; border-bottom: 2px solid #ffb74d; padding-bottom: 8px; }
+  h2 { color: #81d4fa; margin-top: 36px; border-left: 4px solid #81d4fa; padding-left: 12px; }
+  h3 { color: #b39ddb; margin-top: 24px; }
+  .wrap { max-width: 1200px; margin: 0 auto; }
+  .card { background: #1a2030; border: 1px solid #2d3648; border-radius: 8px; padding: 16px 20px; margin: 16px 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  @media (max-width: 900px) { .grid2, .grid3 { grid-template-columns: 1fr; } }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #2d3648; }
+  th { background: #242b3d; color: #81d4fa; }
+  tr.target { background: #2a3d2a; }
+  tr.target td { font-weight: 600; color: #c5e1a5; }
+  .warn { background: #3b1e1e; border-left: 4px solid #e57373; padding: 10px 14px; border-radius: 4px; margin: 12px 0; }
+  .ok { background: #1e3b2d; border-left: 4px solid #81c784; padding: 10px 14px; border-radius: 4px; margin: 12px 0; }
+  .note { background: #2a2a3b; border-left: 4px solid #ba68c8; padding: 10px 14px; border-radius: 4px; margin: 12px 0; }
+  .info { background: #1e2e3b; border-left: 4px solid #4fc3f7; padding: 10px 14px; border-radius: 4px; margin: 12px 0; }
+  code, kbd { background: #0a0e18; color: #ffcc80; padding: 2px 6px; border-radius: 3px; font-family: Consolas, monospace; }
+  .wire-orange-black { background: linear-gradient(90deg, #ff9800 50%, #212121 50%); color: white; padding: 2px 8px; border-radius: 3px; font-weight: 600; text-shadow: 0 0 2px #000; }
+  .wire-orange-brown { background: linear-gradient(90deg, #ff9800 50%, #5d4037 50%); color: white; padding: 2px 8px; border-radius: 3px; font-weight: 600; text-shadow: 0 0 2px #000; }
+  .wire-orange-green { background: linear-gradient(90deg, #ff9800 50%, #2e7d32 50%); color: white; padding: 2px 8px; border-radius: 3px; font-weight: 600; text-shadow: 0 0 2px #000; }
+  .wire-orange-violet { background: linear-gradient(90deg, #ff9800 50%, #6a1b9a 50%); color: white; padding: 2px 8px; border-radius: 3px; font-weight: 600; text-shadow: 0 0 2px #000; }
+  .wire-orange-grey { background: linear-gradient(90deg, #ff9800 50%, #616161 50%); color: white; padding: 2px 8px; border-radius: 3px; font-weight: 600; text-shadow: 0 0 2px #000; }
+  img { max-width: 100%; border-radius: 6px; border: 1px solid #2d3648; background: white; }
+  .imgcap { font-size: 12px; color: #9ea5b7; margin-top: 4px; text-align: center; font-style: italic; }
+  .pin { display: inline-block; width: 34px; height: 34px; border-radius: 50%; background: #2d3648; color: #fff; text-align: center; line-height: 34px; font-weight: 600; font-size: 13px; margin: 2px; }
+  .pin.antrieb-h { background: #ff6f00; color: #000; box-shadow: 0 0 10px #ff6f00; }
+  .pin.antrieb-l { background: #ff6f00; color: #000; box-shadow: 0 0 10px #ff6f00; opacity: 0.8; }
+  .pin.komfort { background: #388e3c; }
+  .pin.info { background: #6a1b9a; }
+  .pin.diag { background: #c62828; }
+  .pin.cluster { background: #0277bd; }
+  .pin.power { background: #fbc02d; color: #000; }
+  .pin.empty { background: #1a2030; border: 1px dashed #444; color: #666; }
+  .hero { text-align: center; font-size: 13px; color: #9ea5b7; margin: 20px 0 8px; }
+  .legend span { display: inline-block; margin: 4px 8px; font-size: 13px; }
+  .legend .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: middle; margin-right: 4px; }
+  .ph { background: #2d3648; border: 2px dashed #666; text-align: center; padding: 40px 16px; border-radius: 8px; color: #9ea5b7; font-style: italic; margin: 12px 0; }
+  .chk { list-style: none; padding-left: 0; }
+  .chk li { padding: 6px 0; padding-left: 28px; position: relative; }
+  .chk li:before { content: "☐"; position: absolute; left: 0; color: #81d4fa; font-size: 18px; }
+  ol.steps > li { margin: 10px 0; padding-left: 8px; }
+  .todo { color: #ffcc80; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Gateway J533 tap — Seat Altea XL 2011 (PQ35)</h1>
+<p style="color:#9ea5b7">Ghid montaj ESP32 + SN65HVD230 pentru listen-only pe CAN-Antrieb prin conectorul gateway-ului J533.<br>
+<strong>Identificat din VCDS</strong>: SW <code>7N0 907 530 C</code> • HW <code>1K0 907 951</code> • Gateway Highline H37 • Platforma PQ35 (1P family).</p>
+
+<div class="ok">
+  <strong>Obiectiv</strong>: montare discreta, listen-only, zero risc, cu acces la toate semnalele broadcast de pe CAN-Antrieb:
+  RPM, torque, load (ECU) • wheel speeds individuale FL/FR/RL/RR (ABS) • yaw rate, lateral G, brake pressure (ESP) • steering angle precis • status ABS/ESP/TCS interventii.
+</div>
+
+<h2>1. Arhitectura CAN pe PQ35 — confirmare</h2>
+
+<div class="card">
+<p>Gateway J533 face bridge intre <strong>4 magistrale CAN</strong> + cluster CAN pe unele variante. <em>CAN-Infotainment</em> (de unde citeste acum SYU CAN box-ul din HU) primeste mesaje <strong>retransmise partial</strong> de gateway — de asta wheel speeds, yaw rate, brake pressure <strong>nu apar</strong> acolo. Trebuie listenat direct pe sursa: CAN-Antrieb.</p>
+
+<svg viewBox="0 0 900 340" width="100%" style="background:#0a0e18; border-radius:8px; padding:10px">
+  <rect x="380" y="140" width="140" height="60" rx="6" fill="#ffb74d" stroke="#000"/>
+  <text x="450" y="165" text-anchor="middle" font-size="14" font-weight="700" fill="#000">Gateway J533</text>
+  <text x="450" y="185" text-anchor="middle" font-size="11" fill="#000">1K0 907 951</text>
+
+  <rect x="40" y="40" width="160" height="40" rx="4" fill="#ff6f00"/>
+  <text x="120" y="65" text-anchor="middle" font-size="13" font-weight="600" fill="#fff">CAN-Antrieb 500kbps</text>
+  <text x="120" y="95" text-anchor="middle" font-size="11" fill="#ffb74d">ECU motor, ABS/ESP, trans</text>
+
+  <rect x="40" y="130" width="160" height="40" rx="4" fill="#388e3c"/>
+  <text x="120" y="155" text-anchor="middle" font-size="13" font-weight="600" fill="#fff">CAN-Komfort 100kbps</text>
+  <text x="120" y="185" text-anchor="middle" font-size="11" fill="#81c784">BCM, usi, climatronic</text>
+
+  <rect x="40" y="220" width="160" height="40" rx="4" fill="#6a1b9a"/>
+  <text x="120" y="245" text-anchor="middle" font-size="13" font-weight="600" fill="#fff">CAN-Infotainment 100k</text>
+  <text x="120" y="275" text-anchor="middle" font-size="11" fill="#ce93d8">Radio, MFD, MFSW (SYU aici)</text>
+
+  <rect x="700" y="40" width="160" height="40" rx="4" fill="#c62828"/>
+  <text x="780" y="65" text-anchor="middle" font-size="13" font-weight="600" fill="#fff">CAN-Diagnose 500k</text>
+  <text x="780" y="95" text-anchor="middle" font-size="11" fill="#ef9a9a">OBD-II (ELM327 aici)</text>
+
+  <rect x="700" y="130" width="160" height="40" rx="4" fill="#0277bd"/>
+  <text x="780" y="155" text-anchor="middle" font-size="13" font-weight="600" fill="#fff">CAN-Cluster 100k</text>
+  <text x="780" y="185" text-anchor="middle" font-size="11" fill="#81d4fa">Instrument cluster MFD</text>
+
+  <line x1="200" y1="60" x2="380" y2="160" stroke="#ff6f00" stroke-width="2"/>
+  <line x1="200" y1="150" x2="380" y2="170" stroke="#388e3c" stroke-width="2"/>
+  <line x1="200" y1="240" x2="380" y2="180" stroke="#6a1b9a" stroke-width="2"/>
+  <line x1="520" y1="160" x2="700" y2="60" stroke="#c62828" stroke-width="2"/>
+  <line x1="520" y1="170" x2="700" y2="150" stroke="#0277bd" stroke-width="2"/>
+
+  <rect x="370" y="270" width="160" height="50" rx="6" fill="#2d3648" stroke="#81d4fa" stroke-width="2" stroke-dasharray="4 2"/>
+  <text x="450" y="292" text-anchor="middle" font-size="13" font-weight="700" fill="#81d4fa">ESP32 + SN65HVD230</text>
+  <text x="450" y="310" text-anchor="middle" font-size="10" fill="#4fc3f7">T-tap pe Antrieb, LISTEN ONLY</text>
+
+  <line x1="120" y1="80" x2="380" y2="290" stroke="#4fc3f7" stroke-width="1.5" stroke-dasharray="3 2"/>
+</svg>
+
+<p class="imgcap">Diagrama: toate CAN-urile converg la gateway; noi ne legam in paralel pe CAN-Antrieb fara a rupe firul.</p>
+</div>
+
+<h2>2. Localizare fizica Gateway J533 pe Altea XL 2011</h2>
+
+<div class="grid2">
+  <div class="card">
+    <h3>Unde este</h3>
+    <p><strong>Zona:</strong> sub bord, stanga, in spatele panoului lateral dash (side trim kick panel) de la piciorul soferului, adiacent sau sub blocul sigurantelor interior.</p>
+    <p><strong>Reper Seat Altea 2006-2015</strong> (confirmat in documentatia portal-diagnostov):</p>
+    <blockquote style="border-left:3px solid #81d4fa; padding-left:12px; color:#b0bec5">
+      "Below the dash panel on left, near centre console" — pozitie 805/28 in wiring manual oficial.
+    </blockquote>
+    <p><strong>Aspect:</strong> cutie plastica neagra cu autocolant cu barcode + part number + label H37.</p>
+    <p><strong>Conector:</strong> singur, multi-pin, tipic <strong>rosu</strong> sau <strong>negru</strong> (20-pin T20 pe 1P/5P Altea).</p>
+  </div>
+  <div class="card">
+    <h3>Cum ajungi la el</h3>
+    <ol>
+      <li>Deschide usa soferului, scoate pragul plastic de pe soseaua stangii (clip-uri simple, trage in sus).</li>
+      <li>Scoate panoul <strong>end-dash</strong> de pe lateralul bordului (unde iese cablajul din tavan). Clip plastic + eventual surub Torx T20.</li>
+      <li>Priveste in sus si spate, spre coloana volanului. Modulul e fixat pe brat metalic sau pe un suport dedicat.</li>
+      <li>Alternative: stai pe spate in zona pedalelor, lumineaza in sus cu lanterna / foto cu telefonul — e metoda documentata de comunitatea comma.ai pentru instalarea harness-ului.</li>
+    </ol>
+  </div>
+</div>
+
+<h2>3. Imagini referinta — modul si conector</h2>
+
+<div class="grid3">
+  <div>
+    <img src="http://www.audi-portal.com/pic/all/A97-0119.jpg" alt="J533 gateway connector pinout diagram"
+         onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+    <div class="ph" style="display:none">Imagine conector J533 de pe audi-portal.com<br>(se incarca live din browser, nu e descarcata)</div>
+    <div class="imgcap">Conector J533 — audi-portal.com</div>
+  </div>
+  <div>
+    <img src="http://www.audi-portal.com/pic/all/A91-0872.jpg" alt="J533 gateway CAN topology"
+         onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+    <div class="ph" style="display:none">Schema topologie CAN de pe audi-portal.com</div>
+    <div class="imgcap">Topologie CAN — audi-portal.com</div>
+  </div>
+  <div>
+    <img src="https://files.readme.io/15079f9-Screenshot_2024-04-19_at_8.35.56_PM.png" alt="J533 module location (comma.ai)"
+         onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+    <div class="ph" style="display:none">Foto modul J533 sub bord — comma.ai howtocomma</div>
+    <div class="imgcap">Pozitie modul J533 — comma.ai</div>
+  </div>
+</div>
+
+<div class="note">
+  <strong>Placeholder-uri pentru poze proprii</strong>: dupa ce demontezi panoul lateral, fa 3 poze si salveaza-le in <code>D:/apps/ergissvag_can/photos/</code>. Le pot embed in HTML:
+  <ul>
+    <li><code>photos/j533_location_altea.jpg</code> — vedere generala cu coloana volanului si modulul</li>
+    <li><code>photos/j533_connector_detached.jpg</code> — conectorul scos din modul, cu pinii vizibili</li>
+    <li><code>photos/j533_wires_closeup.jpg</code> — close-up pe pinii 6 si 16 cu firele portocaliu/maro si portocaliu/negru</li>
+  </ul>
+</div>
+
+<h2>4. Pinout conector T20 — Seat Altea (confirmat)</h2>
+
+<div class="info">
+Confirmat din 2 surse independente: <strong>portal-diagnostov.com</strong> (Seat Altea 2006 body electrical, pozitie 805/28 in manualul service) si <strong>audi-resource.com</strong> (ecu19 Gateway). Pe platforma 1P/5P (Altea, Altea XL, Leon 1P, Toledo 5P) pinout-ul T20 e identic.
+</div>
+
+<table>
+  <thead>
+    <tr><th>Pin</th><th>Functie</th><th>Culoare fir (VAG standard)</th><th>Note</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>1</td><td>Terminal 30 (+12V permanent)</td><td>rosu/...</td><td>alimentat direct din siguranta (~F5 in bloc interior)</td></tr>
+    <tr><td>2</td><td>Terminal 30 (+12V permanent)</td><td>rosu/...</td><td>redundant</td></tr>
+    <tr><td>3</td><td>Wake-up wire la cluster</td><td>—</td><td>trezire bus</td></tr>
+    <tr><td>4</td><td>Diagnosis wire K / loop break</td><td>—</td><td>legacy K-line, de obicei neconectat pe CAN-only</td></tr>
+    <tr><td>5</td><td>CAN-Low Komfort (Convenience)</td><td><span class="wire-orange-brown">orange/brown</span></td><td>100 kbps</td></tr>
+    <tr class="target"><td>6</td><td>CAN-Low Antrieb (Drivetrain)</td><td><span class="wire-orange-brown">orange/brown</span></td><td><strong>TINTA 1 — se conecteaza la CAN_L al SN65HVD230</strong></td></tr>
+    <tr><td>7</td><td>—</td><td>—</td><td>vacant sau rezerva</td></tr>
+    <tr><td>8</td><td>CAN-Low Cluster (Dash panel)</td><td><span class="wire-orange-brown">orange/brown</span></td><td>100 kbps, unele variante</td></tr>
+    <tr><td>9</td><td>CAN-Low Diagnose</td><td><span class="wire-orange-brown">orange/brown</span></td><td>catre OBD pin 14</td></tr>
+    <tr><td>10</td><td>CAN-Low Infotainment</td><td><span class="wire-orange-brown">orange/brown</span></td><td>catre quadlock radio (aici e SYU)</td></tr>
+    <tr><td>11-13</td><td>—</td><td>—</td><td>vacante sau LIN</td></tr>
+    <tr><td>14</td><td>Terminal 31 (GND)</td><td>maro</td><td>masa, se foloseste si pentru ESP32 GND</td></tr>
+    <tr><td>15</td><td>CAN-High Komfort (Convenience)</td><td><span class="wire-orange-green">orange/green</span></td><td>100 kbps</td></tr>
+    <tr class="target"><td>16</td><td>CAN-High Antrieb (Drivetrain)</td><td><span class="wire-orange-black">orange/black</span></td><td><strong>TINTA 2 — se conecteaza la CAN_H al SN65HVD230</strong></td></tr>
+    <tr><td>17</td><td>—</td><td>—</td><td>vacant</td></tr>
+    <tr><td>18</td><td>CAN-High Cluster (Dash panel)</td><td><span class="wire-orange-grey">orange/grey</span></td><td></td></tr>
+    <tr><td>19</td><td>CAN-High Diagnose</td><td><span class="wire-orange-violet">orange/violet</span></td><td>catre OBD pin 6</td></tr>
+    <tr><td>20</td><td>CAN-High Infotainment</td><td><span class="wire-orange-violet">orange/violet</span></td><td>catre quadlock radio</td></tr>
+  </tbody>
+</table>
+
+<div class="warn">
+  <strong>Atentie — variante HW 1K0 907 951</strong>: gateway-ul tau are SW 7N0 (specific Sharan/Alhambra 7N/Altea XL upgrade) pe hardware standard 1K0. Exista o probabilitate mica (~10%) ca pinii 6/16 sa fie swapped cu 7/17 pe aceasta combinatie. <strong>Verifica obligatoriu cu multimetrul si osciloscopul</strong> inainte de conectare (vezi sectiunea 6).
+</div>
+
+<h3>Diagrama T20 — pini colorati pe pozitie</h3>
+
+<div class="card" style="text-align:center">
+<svg viewBox="0 0 440 260" width="100%" style="max-width:600px; background:#0a0e18; border-radius:8px; padding:10px">
+  <text x="220" y="20" text-anchor="middle" font-size="14" font-weight="700" fill="#ffb74d">T20 Gateway J533 — vedere spre pinii conectorului</text>
+  <rect x="30" y="40" width="380" height="140" rx="10" fill="#1a1a1a" stroke="#ffb74d" stroke-width="2"/>
+
+  <g font-size="11" font-weight="700" text-anchor="middle">
+    <circle cx="60" cy="70" r="12" fill="#fbc02d"/><text x="60" y="74" fill="#000">1</text>
+    <circle cx="100" cy="70" r="12" fill="#fbc02d"/><text x="100" y="74" fill="#000">2</text>
+    <circle cx="140" cy="70" r="12" fill="#616161"/><text x="140" y="74" fill="#fff">3</text>
+    <circle cx="180" cy="70" r="12" fill="#616161"/><text x="180" y="74" fill="#fff">4</text>
+    <circle cx="220" cy="70" r="12" fill="#388e3c"/><text x="220" y="74" fill="#fff">5</text>
+    <circle cx="260" cy="70" r="15" fill="#ff6f00" stroke="#fff" stroke-width="2"/><text x="260" y="75" fill="#000">6</text>
+    <circle cx="300" cy="70" r="12" fill="#2d3648"/><text x="300" y="74" fill="#9ea5b7">7</text>
+    <circle cx="340" cy="70" r="12" fill="#0277bd"/><text x="340" y="74" fill="#fff">8</text>
+    <circle cx="380" cy="70" r="12" fill="#c62828"/><text x="380" y="74" fill="#fff">9</text>
+
+    <circle cx="60" cy="150" r="12" fill="#6a1b9a"/><text x="60" y="154" fill="#fff">10</text>
+    <circle cx="100" cy="150" r="12" fill="#2d3648"/><text x="100" y="154" fill="#9ea5b7">11</text>
+    <circle cx="140" cy="150" r="12" fill="#2d3648"/><text x="140" y="154" fill="#9ea5b7">12</text>
+    <circle cx="180" cy="150" r="12" fill="#2d3648"/><text x="180" y="154" fill="#9ea5b7">13</text>
+    <circle cx="220" cy="150" r="12" fill="#fbc02d"/><text x="220" y="154" fill="#000">14</text>
+    <circle cx="260" cy="150" r="12" fill="#388e3c"/><text x="260" y="154" fill="#fff">15</text>
+    <circle cx="300" cy="150" r="15" fill="#ff6f00" stroke="#fff" stroke-width="2"/><text x="300" y="155" fill="#000">16</text>
+    <circle cx="340" cy="150" r="12" fill="#2d3648"/><text x="340" y="154" fill="#9ea5b7">17</text>
+    <circle cx="380" cy="150" r="12" fill="#0277bd"/><text x="380" y="154" fill="#fff">18</text>
+  </g>
+
+  <circle cx="60" cy="200" r="12" fill="#c62828"/><text x="60" y="204" fill="#fff" font-size="11" font-weight="700" text-anchor="middle">19</text>
+  <circle cx="100" cy="200" r="12" fill="#6a1b9a"/><text x="100" y="204" fill="#fff" font-size="11" font-weight="700" text-anchor="middle">20</text>
+
+  <text x="260" y="100" font-size="10" text-anchor="middle" fill="#ff9800">CAN-L</text>
+  <text x="260" y="110" font-size="10" text-anchor="middle" fill="#ff9800">Antrieb</text>
+  <text x="300" y="180" font-size="10" text-anchor="middle" fill="#ff9800">CAN-H</text>
+  <text x="300" y="190" font-size="10" text-anchor="middle" fill="#ff9800">Antrieb</text>
+</svg>
+
+<div class="legend" style="margin-top:12px">
+  <span><span class="dot" style="background:#ff6f00"></span>Antrieb (pin 6/16 — TINTA)</span>
+  <span><span class="dot" style="background:#388e3c"></span>Komfort</span>
+  <span><span class="dot" style="background:#6a1b9a"></span>Infotainment</span>
+  <span><span class="dot" style="background:#c62828"></span>Diagnose</span>
+  <span><span class="dot" style="background:#0277bd"></span>Cluster</span>
+  <span><span class="dot" style="background:#fbc02d"></span>Power/GND</span>
+</div>
+</div>
+
+<h2>5. Hardware montaj</h2>
+
+<div class="grid2">
+  <div class="card">
+    <h3>Wiring ESP32 DevKit v1 ↔ SN65HVD230 ↔ J533</h3>
+    <table>
+      <thead><tr><th>De la</th><th>La</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>ESP32 <code>3.3V</code></td><td>SN65HVD230 <code>VCC</code></td><td><strong>NU 5V</strong></td></tr>
+        <tr><td>ESP32 <code>GND</code></td><td>SN65HVD230 <code>GND</code></td><td>comun cu GND masina (pin 14 gateway)</td></tr>
+        <tr><td>ESP32 <code>GPIO 5</code></td><td>SN65HVD230 <code>CTX</code></td><td>TWAI TX (irelevant in listen-only dar trebuie conectat)</td></tr>
+        <tr><td>ESP32 <code>GPIO 4</code></td><td>SN65HVD230 <code>CRX</code></td><td>TWAI RX</td></tr>
+        <tr><td>SN65HVD230 <code>CAN_H</code></td><td>J533 pin <strong>16</strong> (orange/black)</td><td>T-tap, fara taiere</td></tr>
+        <tr><td>SN65HVD230 <code>CAN_L</code></td><td>J533 pin <strong>6</strong> (orange/brown)</td><td>T-tap, fara taiere</td></tr>
+        <tr><td>ESP32 <code>VIN (5V)</code></td><td>LM2596 OUT (+5V)</td><td>reglat prin potentiometru la 5.0V</td></tr>
+        <tr><td>LM2596 IN (+12V)</td><td>J533 pin <strong>1</strong> (T30) prin siguranta fir 1A sticla</td><td>alimentare directa din gateway — vezi sectiunea 5b</td></tr>
+        <tr><td>LM2596 GND</td><td>J533 pin <strong>14</strong> (T31)</td><td>masa comuna cu gateway</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Tips hardware importante</h3>
+    <ul>
+      <li><strong>Dezlipeste R120</strong> de pe modulul SN65HVD230 (unele board-uri chinezesti au terminator 120Ω intre H si L, care dezechilibreaza bus-ul existent). Verifica cu multimetrul: daca intre pinii CAN_H si CAN_L citesti ~120Ω cu modulul nealimentat → are terminator, scoate-l.</li>
+      <li><strong>Firele la T-tap scurte si rasucite</strong> (twisted pair, max 20 cm), altfel apar reflectii pe 500kbps.</li>
+      <li><strong>LM2596 cu protectie</strong>: condensator 100µF la intrare + dioda TVS SMBJ18A pe +12V (standard automotive pentru spike-uri la demaror).</li>
+      <li><strong>Alimentare ACC, nu B+</strong>: ESP32 cu WiFi activ consuma ~150mA permanent → baterie descarcata in 2 zile. ACC se stinge cu cheia.</li>
+      <li><strong>Consum standby J533</strong>: <1mA (bus sleep dupa 30s). Atentie sa nu-l trezesti permanent cu tapul tau daca transceiver-ul iese din silent mode.</li>
+    </ul>
+  </div>
+</div>
+
+<h2>5b. Alimentare ESP32 direct din gateway (T30 + siguranta sticla)</h2>
+
+<div class="card">
+<p>Solutia practica si curata: alimentezi ESP32 <strong>tot de la conectorul T20 gateway</strong>, fara sa tragi fire suplimentare. Pin 1 si 2 sunt ambii T30 (+12V permanent), iar pin 14 e T31 (masa). Se ia de pe pin 1, prin <strong>siguranta fir din sticla 5x20mm, 1A</strong> (inline fuse holder), apoi in LM2596.</p>
+
+<div class="grid2">
+  <div>
+    <h3>Bilant consum</h3>
+    <table>
+      <thead><tr><th>Componenta</th><th>Consum</th></tr></thead>
+      <tbody>
+        <tr><td>Gateway J533 (awake, CAN activ)</td><td>~30-50 mA @ 12V</td></tr>
+        <tr><td>Gateway J533 (sleep, dupa 30s tacere bus)</td><td>&lt;1 mA</td></tr>
+        <tr><td>ESP32 + WiFi AP activ</td><td>~150 mA @ 5V ≈ <strong>65 mA @ 12V</strong></td></tr>
+        <tr><td>ESP32 light sleep (WiFi off, TWAI on)</td><td>~0.8 mA @ 12V</td></tr>
+        <tr><td>ESP32 deep sleep (wake-on-CAN)</td><td>~10 µA @ 12V</td></tr>
+        <tr><td>SN65HVD230 (listen-only, idle)</td><td>~7 mA @ 3.3V = neglijabil</td></tr>
+        <tr><td>LM2596 overhead (quiescent)</td><td>~6 mA</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Total practic cand masina merge</strong>: ~80 mA din linia T30 — siguranta 1A are rezerva 12x. Perfect ok.</p>
+    <p><strong>Linia T30 pe J533</strong>: alimentata din blocul sigurantelor interior prin siguranta <strong>F5 de 5A</strong> (dupa wiring Altea). Consumul nostru = 1.6% din capacitate — zero impact pe gateway.</p>
+  </div>
+  <div>
+    <h3>Siguranta recomandata</h3>
+    <ul>
+      <li><strong>Tip</strong>: siguranta sticla 5x20mm, rapid-blow, <strong>1A</strong> (nu 2A — ESP32 nu are voie sa traga asa mult, daca trage e scurt).</li>
+      <li><strong>Holder</strong>: inline waterproof cu fire flexibile (gen "ATP auto fuse holder 5x20mm" de pe AliExpress ~1 EUR, sau Emag "portsiguranta fir 5x20").</li>
+      <li><strong>Pozitionare</strong>: cat mai aproape de <strong>punctul de taping pe fir</strong>, nu aproape de ESP32 — protejeaza cablul, nu doar placa.</li>
+      <li><strong>Alternative acceptabile</strong>: mini-blade auto 1A (ATC / MINI) cu holder. Sau rezistor PTC autoresetabil 1.1A (MF-R110) in loc de siguranta — nu arde daca da scurt ocazional.</li>
+    </ul>
+
+    <h3>Strategia drain-baterie</h3>
+    <div class="warn">
+      <strong>Problema</strong>: T30 e permanent. Daca ESP32 ramane in <code>WiFi AP</code> cu masina oprita → 150mA continuu → bateria 60Ah descarcata la 40% in ~1 saptamana (plus consumul propriu al masinii). <strong>Inacceptabil.</strong>
+    </div>
+    <div class="ok">
+      <strong>Solutia</strong>: firmware-ul ESP32 implementeaza <strong>deep-sleep cu wake-on-CAN</strong>:
+      <ul>
+        <li>La startup ESP32 porneste TWAI + WiFi AP.</li>
+        <li>Daca 60s nu vede nici un frame CAN (= masina oprita, bus asleep) → <code>esp_deep_sleep_start()</code>.</li>
+        <li>GPIO wake-up de pe CRX (RX al transceiver-ului) → orice activitate pe bus trezeste chip-ul in ~50ms.</li>
+        <li>Consum in sleep: <strong>~10µA</strong> → bateria tine ani de zile fara drain perceptibil.</li>
+        <li>La pornirea masinii → bus se trezeste → ESP32 se trezeste → AP+WiFi up in ~2 secunde (timp reboot).</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<h3>Schema alimentare actualizata</h3>
+
+<div class="card">
+<svg viewBox="0 0 960 240" width="100%" style="background:#0a0e18; border-radius:8px; padding:10px">
+  <rect x="20" y="60" width="160" height="70" rx="6" fill="#ff6f00"/>
+  <text x="100" y="82" text-anchor="middle" font-size="13" font-weight="700" fill="#000">J533 pin 1 (T30)</text>
+  <text x="100" y="100" text-anchor="middle" font-size="10" fill="#000">+12V permanent</text>
+  <text x="100" y="115" text-anchor="middle" font-size="10" fill="#000">din F5 (5A) interior</text>
+
+  <rect x="210" y="60" width="120" height="70" rx="6" fill="#e57373"/>
+  <text x="270" y="82" text-anchor="middle" font-size="12" font-weight="700" fill="#000">Siguranta</text>
+  <text x="270" y="97" text-anchor="middle" font-size="11" fill="#000">sticla 1A</text>
+  <text x="270" y="115" text-anchor="middle" font-size="10" fill="#000">5x20mm inline</text>
+
+  <rect x="360" y="60" width="140" height="70" rx="6" fill="#4fc3f7"/>
+  <text x="430" y="82" text-anchor="middle" font-size="13" font-weight="700" fill="#000">LM2596</text>
+  <text x="430" y="97" text-anchor="middle" font-size="11" fill="#000">12V → 5V, 1A</text>
+  <text x="430" y="115" text-anchor="middle" font-size="10" fill="#000">+ TVS + cap 100µF</text>
+
+  <rect x="530" y="60" width="140" height="70" rx="6" fill="#81c784"/>
+  <text x="600" y="82" text-anchor="middle" font-size="13" font-weight="700" fill="#000">ESP32 DevKit v1</text>
+  <text x="600" y="97" text-anchor="middle" font-size="10" fill="#000">VIN=5V, wake-on-CAN</text>
+  <text x="600" y="115" text-anchor="middle" font-size="10" fill="#000">80mA active / 10µA sleep</text>
+
+  <rect x="700" y="60" width="140" height="70" rx="6" fill="#ba68c8"/>
+  <text x="770" y="82" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">SN65HVD230</text>
+  <text x="770" y="97" text-anchor="middle" font-size="11" fill="#fff">3.3V</text>
+  <text x="770" y="115" text-anchor="middle" font-size="10" fill="#fff">LISTEN ONLY</text>
+
+  <line x1="180" y1="95" x2="210" y2="95" stroke="#fbc02d" stroke-width="3"/>
+  <line x1="330" y1="95" x2="360" y2="95" stroke="#fbc02d" stroke-width="3"/>
+  <line x1="500" y1="95" x2="530" y2="95" stroke="#fbc02d" stroke-width="3"/>
+  <line x1="670" y1="95" x2="700" y2="95" stroke="#81d4fa" stroke-width="2"/>
+
+  <rect x="20" y="170" width="160" height="40" rx="6" fill="#616161"/>
+  <text x="100" y="195" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">J533 pin 14 (T31)</text>
+  <line x1="180" y1="190" x2="430" y2="190" stroke="#888" stroke-width="2"/>
+  <line x1="430" y1="190" x2="430" y2="130" stroke="#888" stroke-width="2"/>
+  <line x1="430" y1="190" x2="600" y2="190" stroke="#888" stroke-width="2"/>
+  <line x1="600" y1="190" x2="600" y2="130" stroke="#888" stroke-width="2"/>
+  <text x="270" y="205" text-anchor="middle" font-size="10" fill="#888">GND comun</text>
+
+  <rect x="700" y="170" width="140" height="40" rx="6" fill="#ff6f00"/>
+  <text x="770" y="195" text-anchor="middle" font-size="11" font-weight="700" fill="#000">J533 pin 6 + 16</text>
+  <line x1="770" y1="130" x2="770" y2="170" stroke="#ff9800" stroke-width="3"/>
+  <text x="870" y="175" font-size="10" fill="#ff9800">H + L twisted</text>
+  <text x="870" y="190" font-size="10" fill="#ff9800">&lt;20cm</text>
+</svg>
+<p class="imgcap">Schema completa — totul se ia din conectorul T20 al gateway-ului: alimentare (pin 1), masa (pin 14), semnal (pin 6 + 16).</p>
+</div>
+</div>
+
+<h2>6. Procedura pas-cu-pas</h2>
+
+<div class="card">
+<ol class="steps">
+  <li><strong>Pregatire</strong>: masina oprita, cheie scoasa, usa inchisa <strong>60 secunde</strong> ca bus-ul sa intre in sleep. Deschizi usa soferului si actionezi imediat — ai ~30s pana se trezeste bus-ul Komfort.</li>
+  <li><strong>Demontare panou</strong>: scoti pragul stanga si kick panel lateral. Localizezi J533.</li>
+  <li><strong>Scoti conectorul T20</strong>: apasa clemia de siguranta, trage drept. <strong>NU</strong> trage de fire.</li>
+  <li><strong>Verificare pinout cu multimetru</strong> (conector deconectat, masa referinta = caroserie):
+    <ul class="chk">
+      <li>Rezistenta intre pin 6 si pin 16: <strong>~60Ω</strong> (2x 120Ω in paralel = terminatori ECU + gateway) → confirmat Antrieb.</li>
+      <li>Daca citesti ~120Ω → e un singur terminator, posibil bus partial / diferit (repeta masurare cu alt pereche pini ca 5-15 pt Komfort).</li>
+      <li>Daca citesti 0Ω sau ∞ → pini gresiti, opreste-te si re-verifica schema.</li>
+    </ul>
+  </li>
+  <li><strong>Verificare osciloscop</strong> (cu conector reconectat, contact pornit sau motor pornit):
+    <ul class="chk">
+      <li>Pe pin 16 (CAN-H) fata de masa: linie baseline ~2.5V, pulsuri scurte pana la ~3.5V.</li>
+      <li>Pe pin 6 (CAN-L) fata de masa: linie baseline ~2.5V, pulsuri scurte scaderi la ~1.5V.</li>
+      <li>Trigger pe diferential H-L: burst-uri dense de bit la 2µs (=500kbps). Asta confirma definitiv Antrieb.</li>
+      <li>Pentru comparatie: Komfort (pin 15-5) are bit-time 10µs (=100kbps) — mai lent vizibil.</li>
+    </ul>
+  </li>
+  <li><strong>T-tap hardware</strong>: folosesti conectori Scotchlok sau sonde IDC (insulation displacement). Eu recomand <strong>sonda tip Test-Klemme</strong> (clema tip crocodil fin cu ac care patrunde prin izolatie fara taiere). Dupa test, inlocuiesti cu Scotchlok permanent sau cablu sudat + tub termo-retractabil.</li>
+  <li><strong>Fixare ESP32</strong>: cutie plastica mica (3D print sau dozatoare electronice ~5x7cm), fixata cu velcro industrial pe brat metalic langa J533.</li>
+  <li><strong>Test aprins</strong>: contact pornit (nu motor), cu telefonul la AP <code>ErgissVAGCAN</code> si navigand la <code>http://192.168.4.1/data</code> — trebuie sa vezi frame-uri curgand (~500/sec).</li>
+  <li><strong>Logging 60s</strong> cu motor pornit, variind tura + viraje usoare, sa surprinzi toate ID-urile de interes. Dump binary sau JSON salvat pt analiza.</li>
+  <li><strong>Mapping ID-uri</strong>: corelare cu VCDS measuring blocks. Fiecare ID CAN de interes se valideaza observand ca valoarea se schimba sincron cu masurarea VCDS.</li>
+</ol>
+</div>
+
+<h2>7. ID-uri CAN-Antrieb cunoscute pe PQ35 1.2 TSI CBZB</h2>
+
+<table>
+  <thead><tr><th>ID hex</th><th>Sursa</th><th>Continut tipic</th><th>Rata (Hz)</th></tr></thead>
+  <tbody>
+    <tr><td><code>0x280</code></td><td>ECU motor</td><td>RPM (bytes 2-3, little-endian / 4), pedal pozitie, status</td><td>100</td></tr>
+    <tr><td><code>0x288</code></td><td>ECU motor</td><td>Load, torque actual</td><td>100</td></tr>
+    <tr><td><code>0x380</code></td><td>ECU motor</td><td>Coolant temp, intake temp</td><td>50</td></tr>
+    <tr><td><code>0x480</code></td><td>ECU motor</td><td>Advance, MAP, MAF</td><td>50</td></tr>
+    <tr><td><code>0x1A0</code></td><td>ABS controller</td><td>Wheel speeds FL/FR/RL/RR (4x uint16 / 100)</td><td>50</td></tr>
+    <tr><td><code>0x4A0</code></td><td>ESP/ABS</td><td>Yaw rate (int16, °/s / 100), lateral G (int16, m/s² / 100)</td><td>50</td></tr>
+    <tr><td><code>0x5A0</code></td><td>ESP</td><td>Status ABS/ESP/TCS intervention flags, brake pressure</td><td>50</td></tr>
+    <tr><td><code>0x320</code></td><td>ABS</td><td>Brake pedal switch, brake pressure</td><td>50</td></tr>
+    <tr><td><code>0xCA</code></td><td>Steering angle sensor</td><td>Steering angle precis (int16, °/10), rate</td><td>100</td></tr>
+    <tr><td><code>0x3C0</code></td><td>Cluster/Gateway echo</td><td>Odometer, fuel level (broadcast dup de cluster)</td><td>10</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  Aceste ID-uri sunt <strong>orientative</strong> pentru Golf V/Altea. Unele pot fi diferite pe gateway-ul tau specific 7N0. Dump-ul raw initial va confirma.
+</div>
+
+<h2>8. Firmware ESP32 — schelet</h2>
+
+<div class="card">
+<p>Folosesc library-ul <a href="https://github.com/handmade0octopus/ESP32-TWAI-CAN" style="color:#81d4fa">ESP32-TWAI-CAN</a> (Arduino). Scheletul urmator este pentru Faza A (dump raw pe AP WiFi):</p>
+
+<pre style="background:#0a0e18; padding:12px; border-radius:6px; overflow-x:auto; color:#e7eaf0; font-size:13px"><code>#include &lt;ESP32-TWAI-CAN.hpp&gt;
+#include &lt;WiFi.h&gt;
+#include &lt;WebServer.h&gt;
+
+#define CAN_TX       5
+#define CAN_RX       4
+#define BUF_SIZE     256
+#define SLEEP_AFTER  60000UL   // ms — intra in deep sleep daca bus tace 60s
+
+CanFrame buf[BUF_SIZE];
+volatile uint16_t head = 0, tail = 0;
+uint32_t lastFrameMs = 0;
+
+WebServer srv(80);
+
+void enterDeepSleep() {
+  Serial.println("Bus idle - deep sleep, wake on CRX activity");
+  // GPIO 4 (CRX) cu pullup, wake la nivel low (CAN dominant bit)
+  esp_sleep_enable_ext0_wakeup((gpio_num_t)CAN_RX, 0);
+  WiFi.mode(WIFI_OFF);
+  esp_deep_sleep_start();
+}
+
+void setup() {
+  Serial.begin(115200);
+  ESP32Can.setPins(CAN_TX, CAN_RX);
+  ESP32Can.setRxQueueSize(128);
+  ESP32Can.setSpeed(TWAI_SPEED_500KBPS);
+  ESP32Can.setMode(TWAI_MODE_LISTEN_ONLY);   // CRITIC - nu emite nimic
+  if (!ESP32Can.begin()) { Serial.println("CAN init FAIL"); while(1); }
+
+  WiFi.softAP("ErgissVAGCAN", "vagcan2026");
+  lastFrameMs = millis();
+  srv.on("/data", []() {
+    String j = "[";
+    uint16_t i = tail; bool first = true;
+    while (i != head) {
+      if (!first) j += ",";
+      j += "{\"id\":" + String(buf[i].identifier) +
+           ",\"dlc\":" + String(buf[i].data_length_code) + ",\"d\":[";
+      for (int k = 0; k &lt; buf[i].data_length_code; k++) {
+        if (k) j += ",";
+        j += String(buf[i].data[k]);
+      }
+      j += "]}";
+      i = (i+1) % BUF_SIZE; first = false;
+    }
+    tail = head;
+    j += "]";
+    srv.send(200, "application/json", j);
+  });
+  srv.begin();
+}
+
+void loop() {
+  CanFrame f;
+  while (ESP32Can.readFrame(f, 0)) {
+    buf[head] = f;
+    head = (head+1) % BUF_SIZE;
+    if (head == tail) tail = (tail+1) % BUF_SIZE; // overflow discard
+    lastFrameMs = millis();
+  }
+  srv.handleClient();
+
+  if (millis() - lastFrameMs > SLEEP_AFTER) {
+    enterDeepSleep();   // wake-on-CAN via GPIO4
+  }
+}</code></pre>
+
+<p>Faza B (dupa mapping) va avea filtering hardware + parsare pe ID-urile de interes + output JSON structurat.</p>
+</div>
+
+<h2>9. Integrare in ErgissVAG Android app</h2>
+
+<div class="card">
+<p>In <code>D:/apps/ergissvag/app/src/main/java/ro/ergiss/vag/</code> adaug <code>WifiCanReader.kt</code> paralel cu <code>SyuCanReader.kt</code>:</p>
+<ul>
+  <li>Detectie automata AP <code>ErgissVAGCAN</code> → conectare silentioasa.</li>
+  <li>Poll HTTP <code>http://192.168.4.1/data</code> la 200ms (5Hz — suficient pt HUD).</li>
+  <li>Prioritate sursa in <code>ObdService</code>:
+    <ul>
+      <li>Wheel speeds, yaw rate, lateral G, brake pressure, steering precis → <strong>WifiCanReader</strong> (Antrieb, sursa originala)</li>
+      <li>RPM, speed, reverse, dimmer, gear → SyuCanReader (deja merge, nu schimb)</li>
+      <li>Battery, fuel level — din OBD / SyuCanReader</li>
+    </ul>
+  </li>
+  <li>Source indicator pe DashView: <strong>◆CAN-A</strong> (Antrieb via ESP32) in plus fata de <strong>◆CAN</strong> (Infotainment via SYU).</li>
+</ul>
+</div>
+
+<h2>10. Checklist siguranta</h2>
+
+<div class="warn">
+<ul class="chk">
+  <li>Masina oprita si <strong>60s in sleep</strong> la fiecare demontare/remontare conector.</li>
+  <li>Multimetrul verifica <strong>~60Ω H↔L</strong> inainte de orice conectare.</li>
+  <li>Osciloscop confirma bit-time <strong>2µs</strong> = 500kbps Antrieb.</li>
+  <li>Transceiver in mod <strong>LISTEN_ONLY</strong> obligatoriu (<code>TWAI_MODE_LISTEN_ONLY</code>).</li>
+  <li>Terminator 120Ω de pe modul SN65HVD230 <strong>dezlipit</strong>.</li>
+  <li>Twisted pair intre T-tap si transceiver <strong>&lt;20cm</strong>.</li>
+  <li>Alimentare din <strong>pin 1 gateway (T30)</strong> cu <strong>siguranta sticla 1A</strong> inline (nu direct — risc scurt = arde firul).</li>
+  <li>TVS diode 18V pe linia 12V inainte de LM2596.</li>
+  <li>Firmware implementeaza <strong>deep-sleep wake-on-CAN</strong> — ESP32 intra in sleep la 60s fara trafic (masina oprita) → consum 10µA → zero drain baterie.</li>
+  <li>Test initial pe bench (nu in masina) cu OBD sau cu generator CAN sintetic.</li>
+  <li>Dupa montaj — test <strong>VCDS scan</strong>. Nu trebuie sa apara DTC-uri noi. Eventuale "U" code-uri (comunicatie) = probleme hardware de rezolvat inainte de utilizare permanenta.</li>
+</ul>
+</div>
+
+<h2>11. Referinte</h2>
+
+<ul>
+  <li><a href="https://portal-diagnostov.com/en/2021/01/24/6669162-seat-altea-2006-body-electrical-wiring-diagrams-pin-connector-location/" style="color:#81d4fa">portal-diagnostov.com — Seat Altea 2006 body electrical wiring + J533 pinout</a></li>
+  <li><a href="http://www.audi-resource.com/ecu19.php" style="color:#81d4fa">audi-resource.com — Data Bus Diagnostic Interface pin assignments</a></li>
+  <li><a href="https://docs.howtocomma.com/docs/j533-harness-install" style="color:#81d4fa">docs.howtocomma.com — J533 harness install (foto locatie)</a></li>
+  <li><a href="https://vagcode.info/components/998cc7d28d310f80802adaa00f964559.html" style="color:#81d4fa">vagcode.info — 7N0 907 530 C coding & component info</a></li>
+  <li><a href="https://github.com/handmade0octopus/ESP32-TWAI-CAN" style="color:#81d4fa">GitHub — ESP32-TWAI-CAN library</a></li>
+  <li><a href="https://github.com/AxesOfEvil/FYTCanbusMonitor" style="color:#81d4fa">GitHub — FYTCanbusMonitor (reference Android HU CAN)</a></li>
+  <li>C:/Ross-Tech/VCDS/Scans/Scan-VSSZZZ5PZBR033484-20260320-0705-305960km-190114mi.txt — scan VCDS masina</li>
+</ul>
+
+<p class="hero">ErgissVAG CAN tap v0.1 — 2026-04-20 • D:/apps/ergissvag_can/gateway_j533.html</p>
+
+</div>
+</body>
+</html>
