@@ -46,3 +46,7 @@ Copyright © Gabriel Diaconu / ERGISS Media.
 ---
 Built by **ERGISS Media** — [ergiss.ro](https://www.ergiss.ro) · [mensoft.ro](https://www.mensoft.ro)
 Android: **[ErgissVAG F16 on Google Play](https://play.google.com/store/apps/details?id=ro.ergiss.vag.f16)**
+
+## Support
+
+If this helps you, you can buy me a coffee: **[paypal.me/axon003](https://paypal.me/axon003)**. Thank you!
