@@ -20,6 +20,7 @@
 
 // --- OBD2 queries (always broadcast / functional, raspuns multi-ECU) ---
 bool obd_query_pid01(uint8_t pid);            // mode 01 cur data
+bool obd_probe();                             // 7DF 02 01 00 single-shot (fara retransmisie fara ACK)
 bool obd_query_dtcs();                        // mode 03 stored DTCs (broadcast)
 bool obd_clear_dtcs();                        // mode 04 clear DTCs (broadcast)
 bool obd_query_pending_dtcs();                // mode 07 pending DTCs (broadcast)
@@ -32,5 +33,10 @@ bool uds_read_dtc_info_all();                                       // mode 19 s
 
 // Procesare mesaj complet primit din ISO-TP — emite JSON pe Serial + TCP
 void obd_process_response(uint32_t src_id, const uint8_t *data, size_t len);
+
+// v1.2 (fw 2.6.0): ID-ul cererii FUNCTIONALE curente — 0x7DF pe 11 biti, 0x18DB33F1 pe 29 de biti.
+// Se schimba doar la autodetectie (profil cu "auto":1); altfel ramane 0x7DF.
+uint32_t obd_func_id();
+void     obd_set_func_id(uint32_t id);
 
 #endif

@@ -1,9 +1,11 @@
 /**
  * obd_cmd.cpp — implementare OBD2 + UDS command/response handling
  * @author Gabriel Diaconu (ERGISS Media)
- * @version 1.0
+ * @version 1.2
  * @changes
+ *   v1.2 2026-09-29 — fw 2.6.0: cererile functionale pleaca pe obd_func_id() (0x7DF sau 0x18DB33F1), nu pe o constanta
  *   v1.0 2026-05-23 — creat initial
+ *   v1.1 2026-09-14 — obd_probe(): 7DF 02 01 00 cu TWAI_MSG_FLAG_SS pt probe-ul idle (fara retransmisie fara ACK)
  */
 #include "obd_cmd.h"
 #include "iso_tp.h"
@@ -13,31 +15,40 @@
 // Forward decl — emitJson din main.cpp/main.ino (Serial + TCP)
 extern void emitJson(const char *line, size_t len);
 
+static uint32_t g_func_id = OBD_FUNCTIONAL_REQ_ID;
+uint32_t obd_func_id() { return g_func_id; }
+void     obd_set_func_id(uint32_t id) { g_func_id = id ? id : OBD_FUNCTIONAL_REQ_ID; }
+
 // ---- Query builders (toate Single Frame, ≤7 bytes payload) ----
 
 bool obd_query_pid01(uint8_t pid) {
     uint8_t req[2] = { 0x01, pid };
-    return iso_tp_send_sf(OBD_FUNCTIONAL_REQ_ID, req, 2);
+    return iso_tp_send_sf(g_func_id, req, 2);
+}
+
+bool obd_probe() {
+    uint8_t req[2] = { 0x01, 0x00 };
+    return iso_tp_send_sf(g_func_id, req, 2, true);
 }
 
 bool obd_query_dtcs() {
     uint8_t req[1] = { 0x03 };
-    return iso_tp_send_sf(OBD_FUNCTIONAL_REQ_ID, req, 1);
+    return iso_tp_send_sf(g_func_id, req, 1);
 }
 
 bool obd_clear_dtcs() {
     uint8_t req[1] = { 0x04 };
-    return iso_tp_send_sf(OBD_FUNCTIONAL_REQ_ID, req, 1);
+    return iso_tp_send_sf(g_func_id, req, 1);
 }
 
 bool obd_query_pending_dtcs() {
     uint8_t req[1] = { 0x07 };
-    return iso_tp_send_sf(OBD_FUNCTIONAL_REQ_ID, req, 1);
+    return iso_tp_send_sf(g_func_id, req, 1);
 }
 
 bool obd_query_info09(uint8_t pid) {
     uint8_t req[2] = { 0x09, pid };
-    return iso_tp_send_sf(OBD_FUNCTIONAL_REQ_ID, req, 2);
+    return iso_tp_send_sf(g_func_id, req, 2);
 }
 
 bool uds_diag_session(uint32_t ecu_can_id, uint8_t session_type) {
@@ -53,7 +64,7 @@ bool uds_read_did(uint32_t ecu_can_id, uint16_t did) {
 bool uds_read_dtc_info_all() {
     // 0x19 0x02 0xFF = ReportDTCByStatusMask, mask 0xFF (toate statusurile)
     uint8_t req[3] = { 0x19, 0x02, 0xFF };
-    return iso_tp_send_sf(OBD_FUNCTIONAL_REQ_ID, req, 3);
+    return iso_tp_send_sf(g_func_id, req, 3);
 }
 
 // ---- Response parsers ----

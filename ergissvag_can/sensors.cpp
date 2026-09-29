@@ -1,8 +1,14 @@
 /**
  * sensors.cpp — BMP280 + GY-85 reader implementation
  * @author Gabriel Diaconu (ERGISS Media)
- * @version 1.2
+ * @version 1.4
  * @changes
+ *   v1.4 2026-09-24 — fw 2.5.13: calibrare magnetometru. In masina campul propriu (hard-iron) domina: mag_hdg varia doar
+ *                     6..34 grd cand GPS acoperea 0..360. Corectie offset + scara X/Y + orientare montaj (mag.hofs, mag.inv),
+ *                     salvate in cfg; colectare AUTOMATA cand nu exista calibrare (min/max pe semnal filtrat EMA, salvare cand
+ *                     span X si Y >= MAGCAL_AUTO_SPAN_UT); comanda MAGCAL; eveniment in jurnal la salvare.
+ *   v1.3 2026-09-24 — fw 2.5.12: magnetometru QMC5883P @0x2C (varianta noua pe clonele GY-85; ID reg 0x00 = 0x80).
+ *                     Adresa 0x2C aparea la scan din mai, dar nu era recunoscuta => MAG=MISSING.
  *   v1.0 2026-05-23 — creat initial
  *   v1.2 2026-05-23 — i2c_scan_print() printeaza la boot toate adresele I2C prezente
  *                     (diagnoza pt magnetometru "none" — daca apar adrese neasteptate,
@@ -14,6 +20,8 @@
  */
 #include "sensors.h"
 #include "config.h"
+#include "cfg.h"     // v1.4: calibrare magnetometru in NVS
+#include "proto.h"   // v1.4: proto_event (jurnal automat)
 #include <Wire.h>
 #include <Adafruit_BMP280.h>
 #include <Adafruit_ADXL345_U.h>
@@ -28,10 +36,11 @@ static bool g_gyro_present  = false;
 static bool g_mag_present   = false;
 
 // Magnetometru — tip chip detectat
-enum MagChip : uint8_t { MAG_NONE = 0, MAG_HMC = 1, MAG_QMC = 2 };
+enum MagChip : uint8_t { MAG_NONE = 0, MAG_HMC = 1, MAG_QMC = 2, MAG_QMCP = 3 };
 static MagChip g_mag_chip = MAG_NONE;
 #define HMC5883L_ADDR  0x1E
 #define QMC5883L_ADDR  0x0D
+#define QMC5883P_ADDR  0x2C   // v1.3
 
 // ----- I2C helpers generice -----
 
@@ -119,6 +128,178 @@ static bool qmc_read(float &mx, float &my, float &mz) {
     my = (float)ry / LSB_PER_UT;
     mz = (float)rz / LSB_PER_UT;
     return true;
+}
+
+// ----- v1.3: QMC5883P (QST, adresa fixa 0x2C) — alt set de registre decat QMC5883L -----
+// ID 0x00 = 0x80; date 0x01..0x06 = X L,X H,Y L,Y H,Z L,Z H; 0x0A control 1, 0x0B control 2, 0x29 semn axe.
+static bool qmcp_init() {
+    if (!i2c_probe(QMC5883P_ADDR)) return false;
+    uint8_t id = 0;
+    if (!i2c_read_regs(QMC5883P_ADDR, 0x00, &id, 1)) return false;
+    if (id != 0x80) { Serial.printf("[I2C] 0x2C raspunde dar ID = %02X (NU QMC5883P, astept 80)\n", id); return false; }
+    if (!i2c_write_reg(QMC5883P_ADDR, 0x29, 0x06)) return false;   // semnul axelor (secventa din datasheet)
+    if (!i2c_write_reg(QMC5883P_ADDR, 0x0B, 0x08)) return false;   // RNG 8 G, set/reset pornit
+    if (!i2c_write_reg(QMC5883P_ADDR, 0x0A, 0xCD)) return false;   // mod normal (continuu), ODR 200 Hz, OSR
+    delay(10);
+    return true;
+}
+static bool qmcp_read(float &mx, float &my, float &mz) {
+    uint8_t b[6];
+    if (!i2c_read_regs(QMC5883P_ADDR, 0x01, b, 6)) return false;
+    int16_t rx = (int16_t)((b[1] << 8) | b[0]);
+    int16_t ry = (int16_t)((b[3] << 8) | b[2]);
+    int16_t rz = (int16_t)((b[5] << 8) | b[4]);
+    const float LSB_PER_UT = 37.5f;  // 8 G: 3750 LSB/Gauss
+    mx = (float)rx / LSB_PER_UT;
+    my = (float)ry / LSB_PER_UT;
+    mz = (float)rz / LSB_PER_UT;
+    return true;
+}
+
+// ----- v1.4: calibrare magnetometru -----
+static bool     g_cal_loaded = false;
+static bool     g_cal_ok = false;                 // exista calibrare salvata (mag.cal=1)
+static float    g_ox = 0, g_oy = 0, g_oz = 0;     // offset hard-iron (uT)
+static float    g_sx = 1, g_sy = 1;               // scara soft-iron simpla (egalizeaza X/Y)
+static float    g_hofs = 0;                       // orientare montaj (grade adunate la heading)
+static bool     g_inv = false;                    // sens invers (senzor montat „cu fata in jos” fata de conventie)
+static bool     g_col = false, g_col_auto = false;
+static uint32_t g_col_n = 0;
+static float    g_fx, g_fy, g_fz;                 // filtru EMA — taie varfurile scurte (tramvai, masina vecina)
+static float    g_mnx, g_mxx, g_mny, g_mxy, g_mnz, g_mxz;
+static bool     g_last_ok = false;
+static float    g_lx, g_ly;                       // ultima citire bruta (pt MAGCAL HDG)
+
+static void col_start(bool automat) { g_col = true; g_col_auto = automat; g_col_n = 0; }
+
+static void cal_load() {
+    g_cal_loaded = true;
+    g_cal_ok = cfg_int("mag.cal") == 1;
+    g_ox = cfg_int("mag.ox") / 10.0f; g_oy = cfg_int("mag.oy") / 10.0f; g_oz = cfg_int("mag.oz") / 10.0f;
+    g_sx = cfg_int("mag.sx") / 1000.0f; g_sy = cfg_int("mag.sy") / 1000.0f;
+    if (g_sx <= 0) g_sx = 1; if (g_sy <= 0) g_sy = 1;
+    g_hofs = cfg_int("mag.hofs") / 10.0f;
+    g_inv = cfg_int("mag.inv") == 1;
+    if (!g_cal_ok) col_start(true);
+}
+
+static void col_add(float x, float y, float z) {
+    if (fabsf(x) > MAGCAL_RAW_MAX_UT || fabsf(y) > MAGCAL_RAW_MAX_UT || fabsf(z) > MAGCAL_RAW_MAX_UT) return;
+    if (g_col_n == 0) {
+        g_fx = x; g_fy = y; g_fz = z;
+        g_mnx = g_mxx = x; g_mny = g_mxy = y; g_mnz = g_mxz = z;
+    } else {
+        g_fx += MAGCAL_EMA * (x - g_fx); g_fy += MAGCAL_EMA * (y - g_fy); g_fz += MAGCAL_EMA * (z - g_fz);
+        if (g_col_n >= MAGCAL_WARMUP) {   // primele esantioane doar incarca filtrul
+            g_mnx = fminf(g_mnx, g_fx); g_mxx = fmaxf(g_mxx, g_fx);
+            g_mny = fminf(g_mny, g_fy); g_mxy = fmaxf(g_mxy, g_fy);
+            g_mnz = fminf(g_mnz, g_fz); g_mxz = fmaxf(g_mxz, g_fz);
+        } else {
+            g_mnx = g_mxx = g_fx; g_mny = g_mxy = g_fy; g_mnz = g_mxz = g_fz;
+        }
+    }
+    g_col_n++;
+}
+
+static bool save_int(const char *k, long v, String &err) {
+    char b[16]; snprintf(b, sizeof(b), "%ld", v);
+    return cfg_set(k, b, err);
+}
+
+// calculeaza + salveaza; minSpan = pragul de acoperire pe X si Y
+static bool col_finish(float minSpan, String &msg) {
+    float spx = g_mxx - g_mnx, spy = g_mxy - g_mny;
+    if (g_col_n < MAGCAL_MIN_SAMPLES || spx < minSpan || spy < minSpan) {
+        char b[160];
+        snprintf(b, sizeof(b), "MAGCAL: acoperire insuficienta (esantioane %lu/%d, span X %.1f Y %.1f uT, prag %.0f) — mai fa viraje",
+                 (unsigned long)g_col_n, MAGCAL_MIN_SAMPLES, spx, spy, minSpan);
+        msg = b; return false;
+    }
+    float ox = (g_mxx + g_mnx) / 2, oy = (g_mxy + g_mny) / 2, oz = (g_mxz + g_mnz) / 2;
+    float avg = (spx + spy) / 2, sx = avg / spx, sy = avg / spy;
+    String err;
+    if (!save_int("mag.ox", lroundf(ox * 10), err) || !save_int("mag.oy", lroundf(oy * 10), err) ||
+        !save_int("mag.oz", lroundf(oz * 10), err) || !save_int("mag.sx", lroundf(sx * 1000), err) ||
+        !save_int("mag.sy", lroundf(sy * 1000), err) || !save_int("mag.cal", 1, err)) {
+        msg = "MAGCAL: salvare ESUATA: " + err; return false;
+    }
+    g_ox = ox; g_oy = oy; g_oz = oz; g_sx = sx; g_sy = sy; g_cal_ok = true; g_col = false;
+    char b[200];
+    snprintf(b, sizeof(b), "MAGCAL salvat: offset X %.1f Y %.1f Z %.1f uT, scara X %.3f Y %.3f, span X %.1f Y %.1f uT, %lu esantioane",
+             ox, oy, oz, sx, sy, spx, spy, (unsigned long)g_col_n);
+    msg = b; return true;
+}
+
+static float norm360(float h) { while (h < 0) h += 360.0f; while (h >= 360.0f) h -= 360.0f; return h; }
+
+// heading fara mag.hofs (pt MAGCAL HDG) si cu el
+static float heading_base(float x, float y) {
+    float cx = x, cy = y;
+    if (g_cal_ok) { cx = (x - g_ox) * g_sx; cy = (y - g_oy) * g_sy; }
+    float h = atan2f(cy, cx) * 180.0f / (float)M_PI;
+    if (g_inv) h = -h;
+    return norm360(h);
+}
+
+String sensors_magcal_cmd(const char *sub, const char *arg) {
+    if (!g_cal_loaded) cal_load();
+    if (!g_mag_present) return "MAGCAL: magnetometru absent";
+    String msg;
+    if (sub && !strcasecmp(sub, "START")) {
+        col_start(false);
+        return "MAGCAL: colectare pornita — viraje in toate directiile (un cerc complet), apoi MAGCAL STOP";
+    }
+    if (sub && !strcasecmp(sub, "STOP")) {
+        if (!g_col) return "MAGCAL: nu colectez (MAGCAL START intai)";
+        if (col_finish(MAGCAL_MIN_SPAN_UT, msg)) proto_event("%s (manual)", msg.c_str());
+        return msg;
+    }
+    if (sub && !strcasecmp(sub, "RESET")) {
+        const char *keys[] = {"mag.cal", "mag.ox", "mag.oy", "mag.oz", "mag.sx", "mag.sy", "mag.hofs", "mag.inv"};
+        for (const char *k : keys) cfg_reset_key(k);
+        cal_load();
+        return "MAGCAL: calibrare stearsa; colectare automata pornita (se salveaza singura dupa un cerc complet)";
+    }
+    if (sub && !strcasecmp(sub, "HDG")) {
+        if (!arg) return "MAGCAL HDG <grade_reale 0..359>  (directia reala a masinii acum, ex. din GPS in mers)";
+        if (!g_last_ok) return "MAGCAL: nu am citire magnetometru";
+        float real = atof(arg);
+        float ofs = real - heading_base(g_lx, g_ly);
+        while (ofs > 180) ofs -= 360; while (ofs < -180) ofs += 360;
+        String err;
+        if (!save_int("mag.hofs", lroundf(ofs * 10), err)) return "MAGCAL: salvare ESUATA: " + err;
+        g_hofs = ofs;
+        char b[96]; snprintf(b, sizeof(b), "MAGCAL: orientare montaj %.1f grd salvata", ofs); return b;
+    }
+    if (sub && !strcasecmp(sub, "INV")) {
+        if (!arg || (strcmp(arg, "0") && strcmp(arg, "1"))) return "MAGCAL INV 0|1";
+        String err;
+        if (!save_int("mag.inv", atoi(arg), err)) return "MAGCAL: salvare ESUATA: " + err;
+        g_inv = atoi(arg) == 1;
+        return g_inv ? "MAGCAL: sens inversat" : "MAGCAL: sens normal";
+    }
+    if (sub && *sub) return "MAGCAL [START|STOP|RESET|HDG <grade>|INV 0|1]";
+    char b[420];
+    int n = snprintf(b, sizeof(b), "MAGCAL: calibrare %s | offset X %.1f Y %.1f Z %.1f uT | scara X %.3f Y %.3f | montaj %.1f grd%s\r\n",
+                     g_cal_ok ? "SALVATA" : "LIPSA", g_ox, g_oy, g_oz, g_sx, g_sy, g_hofs, g_inv ? " INV" : "");
+    if (g_last_ok)
+        n += snprintf(b + n, sizeof(b) - n, "  brut X %.1f Y %.1f uT -> heading %.1f grd\r\n", g_lx, g_ly, norm360(heading_base(g_lx, g_ly) + g_hofs));
+    if (g_col)
+        snprintf(b + n, sizeof(b) - n, "  colectare %s: %lu esantioane, span X %.1f Y %.1f Z %.1f uT (salvare automata la %.0f)",
+                 g_col_auto ? "AUTOMATA" : "manuala", (unsigned long)g_col_n,
+                 g_col_n ? g_mxx - g_mnx : 0.0f, g_col_n ? g_mxy - g_mny : 0.0f, g_col_n ? g_mxz - g_mnz : 0.0f, MAGCAL_AUTO_SPAN_UT);
+    return String(b);
+}
+
+String sensors_mag_json(const SensorData &s) {
+    if (!g_mag_present) return "";
+    char b[200];
+    int n = snprintf(b, sizeof(b), ",\"mag\":{\"ok\":%d,\"x\":%.1f,\"y\":%.1f,\"z\":%.1f,\"h\":%.1f,\"cal\":%d,\"col\":%d",
+                     s.mag_ok ? 1 : 0, s.mag_x_ut, s.mag_y_ut, s.mag_z_ut, s.mag_heading_deg, g_cal_ok ? 1 : 0, g_col ? 1 : 0);
+    if (g_col && g_col_n)
+        n += snprintf(b + n, sizeof(b) - n, ",\"n\":%lu,\"spx\":%.1f,\"spy\":%.1f", (unsigned long)g_col_n, g_mxx - g_mnx, g_mxy - g_mny);
+    snprintf(b + n, sizeof(b) - n, "}");
+    return String(b);
 }
 
 // ----- ITG3200 raw I2C helpers -----
@@ -228,7 +409,8 @@ static void print_sensor_status() {
         g_accel_present ? "OK" : "MISSING",
         g_gyro_present  ? "OK" : "MISSING",
         g_mag_chip == MAG_HMC ? "HMC@0x1E" :
-        g_mag_chip == MAG_QMC ? "QMC@0x0D" : "MISSING");
+        g_mag_chip == MAG_QMC ? "QMC@0x0D" :
+        g_mag_chip == MAG_QMCP ? "QMC5883P@0x2C" : "MISSING");
 }
 
 // Publica — apelata din loop() la fiecare ciclu STAT (10s). Scan I2C + sumar status senzori.
@@ -287,10 +469,14 @@ bool sensors_init() {
         g_mag_chip = MAG_QMC;
         g_mag_present = true;
         Serial.printf("[I2C] QMC5883L @0x%02X OK (QST clone, 2 Ga, 12 LSB/uT)\n", QMC5883L_ADDR);
+    } else if (qmcp_init()) {                                   // v1.3
+        g_mag_chip = MAG_QMCP;
+        g_mag_present = true;
+        Serial.printf("[I2C] QMC5883P @0x%02X OK (QST, 8 G, 37.5 LSB/uT)\n", QMC5883P_ADDR);
     } else {
         g_mag_chip = MAG_NONE;
         g_mag_present = false;
-        Serial.println("[I2C] Magnetometru MISSING (nici HMC @0x1E, nici QMC @0x0D)");
+        Serial.println("[I2C] Magnetometru MISSING (nici HMC @0x1E, nici QMC @0x0D, nici QMC5883P @0x2C)");
     }
 
     // Sumar status init — repetabil identic la STAT 10s (vezi sensors_debug_print)
@@ -332,13 +518,25 @@ void sensors_read(SensorData &s) {
         switch (g_mag_chip) {
             case MAG_HMC: ok = hmc_read(s.mag_x_ut, s.mag_y_ut, s.mag_z_ut); break;
             case MAG_QMC: ok = qmc_read(s.mag_x_ut, s.mag_y_ut, s.mag_z_ut); break;
+            case MAG_QMCP: ok = qmcp_read(s.mag_x_ut, s.mag_y_ut, s.mag_z_ut); break;   // v1.3
             default: break;
         }
         if (ok) {
-            // Heading din atan2(Y, X), ajustat la 0..360
-            float h = atan2f(s.mag_y_ut, s.mag_x_ut) * 180.0f / (float)M_PI;
-            if (h < 0) h += 360.0f;
-            s.mag_heading_deg = h;
+            // v1.4: calibrare — colectare (automata daca lipseste) + heading din X/Y corectate
+            if (!g_cal_loaded) cal_load();
+            g_lx = s.mag_x_ut; g_ly = s.mag_y_ut; g_last_ok = true;
+            if (g_col) {
+                col_add(s.mag_x_ut, s.mag_y_ut, s.mag_z_ut);
+                if (g_col_auto && g_col_n >= MAGCAL_MIN_SAMPLES &&
+                    g_mxx - g_mnx >= MAGCAL_AUTO_SPAN_UT && g_mxy - g_mny >= MAGCAL_AUTO_SPAN_UT) {
+                    String msg;
+                    if (col_finish(MAGCAL_AUTO_SPAN_UT, msg)) proto_event("%s (automat)", msg.c_str());
+                    else { proto_event("%s", msg.c_str()); g_col = false; }   // salvare esuata: raportat, nu reincerc la 10 Hz
+                    Serial.println(msg);
+                }
+            }
+            s.mag_heading_deg = norm360(heading_base(s.mag_x_ut, s.mag_y_ut) + g_hofs);
+            s.mag_cal = g_cal_ok;
             s.mag_ok = true;
         }
     }
@@ -349,6 +547,7 @@ static const char* mag_chip_str() {
     switch (g_mag_chip) {
         case MAG_HMC: return "HMC";
         case MAG_QMC: return "QMC";
+        case MAG_QMCP: return "QMC5883P";   // v1.3
         default:      return "none";
     }
 }
