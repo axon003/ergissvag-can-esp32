@@ -73,8 +73,8 @@ development. Use an inline fuse. You are responsible for any work on your vehicl
    / telnet for the console) — data flows as JSON.
 
 ## License
-**PolyForm Noncommercial License 1.0.0** — free for noncommercial use. See [`LICENSE.md`](LICENSE.md).
-**Commercial use requires a separate license** — contact **office@ergiss.ro**.
+**GNU General Public License v3.0 or later** (GPL-3.0-or-later). See [`LICENSE`](LICENSE).
+Until 2026-11-05 this project was published under PolyForm Noncommercial 1.0.0; from this version on it is open source under the GPL.
 
 Copyright © Gabriel Diaconu / ERGISS Media.
 
